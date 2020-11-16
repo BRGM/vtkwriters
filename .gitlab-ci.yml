@@ -1,0 +1,56 @@
+image: ${CI_BUILD_ENVIRONMENT_IMAGE}
+
+stages:
+  - check-format
+  - build
+  - test
+#  - documentation
+
+check:
+  stage: check-format
+  tags:
+    - docker
+  #only:
+  #  - merge_requests
+  script:
+    # We could check format only for merge requests
+    # using only merge_requests
+    # and CI_MERGE_REQUEST_SOURCE_BRANCH_SHA and CI_MERGE_REQUEST_SOURCE_BRANCH_SHA
+    # variables but the latest are not correclyt set
+    - pre-commit run --all
+
+build:
+  stage: build
+  tags:
+    - docker
+  script:
+    - python3 setup.py bdist_wheel
+  artifacts:
+    paths:
+    - dist/
+    expose_as: wheel
+    when: on_success
+
+test:
+  stage: test
+  tags:
+    - docker
+  before_script:
+    - pip3 install --upgrade --no-index --find-links ./dist vtkwriters
+  script:
+    - python3 test/bulk.py
+
+# pages:
+#   stage: documentation
+#   tags:
+#     - docker
+#   only:
+#     - master
+#   before_script:
+#     - pip3 install --upgrade --no-index --find-links ./dist vtkwriters
+#     - mkdir -p public
+#   script:
+#     - /bin/bash -e docs/generate_doc.bash
+#   artifacts:
+#     paths:
+#     - public
