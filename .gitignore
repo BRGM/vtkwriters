@@ -4,6 +4,7 @@ __pycache__/
 *.vti
 *.vtm
 *.pvd
+build/
 dist/
 *.TMP
 *.pyc
