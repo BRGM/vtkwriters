@@ -4,6 +4,7 @@ stages:
   - check-format
   - build
   - test
+  - deploy
 #  - documentation
 
 check:
@@ -39,6 +40,33 @@ test:
     - pip3 install --upgrade --no-index --find-links ./dist vtkwriters
   script:
     - python3 test/bulk.py
+
+deploy-snapshot:
+  stage: deploy
+  tags:
+    - docker
+  script:
+    - twine upload -u ${REGISTRY_NEXUS_USER} -p ${REGISTRY_NEXUS_PASSWORD} --repository-url ${REGISTRY_NEXUS}/pypi-snapshots/ dist/*
+
+deploy-master:
+  stage: deploy
+  tags:
+    - docker
+  only:
+    - master
+  script:
+    - twine upload -u ${REGISTRY_NEXUS_USER} -p ${REGISTRY_NEXUS_PASSWORD} --repository-url ${REGISTRY_NEXUS}/pypi-stage/ dist/*
+
+deploy-tag:
+  stage: deploy
+  tags:
+    - docker
+  only:
+    - tags
+  except:
+    - branches
+  script:
+    - twine upload -u ${REGISTRY_NEXUS_USER} -p ${REGISTRY_NEXUS_PASSWORD} --repository-url ${REGISTRY_NEXUS}/pypi-snapshots/ dist/*
 
 # pages:
 #   stage: documentation
