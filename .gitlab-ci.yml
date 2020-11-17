@@ -42,14 +42,7 @@ test:
   script:
     - python3 test/bulk.py
 
-deploy-snapshot:
-  stage: deploy
-  tags:
-    - docker
-  script:
-    - twine upload -u ${REGISTRY_NEXUS_USER} -p ${REGISTRY_NEXUS_PASSWORD} --repository-url ${REGISTRY_NEXUS}/pypi-snapshots/ dist/*
-
-deploy-master:
+deploy-stage:
   stage: deploy
   tags:
     - docker
@@ -58,7 +51,7 @@ deploy-master:
   script:
     - twine upload -u ${REGISTRY_NEXUS_USER} -p ${REGISTRY_NEXUS_PASSWORD} --repository-url ${REGISTRY_NEXUS}/pypi-stage/ dist/*
 
-deploy-tag:
+deploy-release:
   stage: deploy
   tags:
     - docker
@@ -67,7 +60,7 @@ deploy-tag:
   except:
     - branches
   script:
-    - twine upload -u ${REGISTRY_NEXUS_USER} -p ${REGISTRY_NEXUS_PASSWORD} --repository-url ${REGISTRY_NEXUS}/pypi-snapshots/ dist/*
+    - twine upload -u ${REGISTRY_NEXUS_USER} -p ${REGISTRY_NEXUS_PASSWORD} --repository-url ${REGISTRY_NEXUS}/pypi-releases/ dist/*
 
 # pages:
 #   stage: documentation
