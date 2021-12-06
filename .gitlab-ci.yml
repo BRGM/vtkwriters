@@ -14,7 +14,6 @@ check-format-and-version:
   #only:
   #  - merge_requests
   script:
-    - python3 check_git_tag_against_version.py
     # We could check format only for merge requests
     # using only merge_requests
     # and CI_MERGE_REQUEST_SOURCE_BRANCH_SHA and CI_MERGE_REQUEST_SOURCE_BRANCH_SHA
