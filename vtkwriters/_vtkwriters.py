@@ -132,8 +132,10 @@ def add_dataarray(
     return elt
 
 
-def add_piece_data(piece, location, data=None, ofmt="ascii"):
-    datanode = create_childnode(piece, location, {"Scalars": "scalars"})
+def add_piece_data(piece, location, data=None, attributes=None, ofmt="ascii"):
+    if attributes is None:
+        attributes = {"Scalars": "scalars"}
+    datanode = create_childnode(piece, location, attributes)
     if data is None:
         data = {}
     for name in sorted(data):
@@ -406,6 +408,109 @@ def pvtu_doc(
     return doc
 
 
+def elevation_map_as_vtp_doc(
+    zmap,
+    upper_left_center=None,
+    upper_left_corner=None,
+    shape=None,
+    steps=None,
+    pointdata=None,
+    celldata=None,
+    texture=None,
+    ofmt="binary",
+):
+    """
+    """
+
+    if shape is None:
+        assert zmap.ndim == 2
+        shape = zmap.shape
+    ny, nx = shape
+    z = np.reshape(zmap, (ny, nx))
+    assert steps is not None
+    dx, dy = steps
+    assert upper_left_center is None or upper_left_corner is None
+    assert not (upper_left_center is None and upper_left_corner is None)
+    assert nx > 1 and ny > 1
+    assert dx > 0 and dy > 0
+    if upper_left_center is not None:
+        Ox, Oy = upper_left_center
+    else:
+        Ox, Oy = upper_left_corner
+        Ox += 0.5 * dx
+        Oy += 0.5 * dy
+
+    x = np.arange(Ox, Ox + (nx - 0.5) * dx, dx)
+    assert x.shape == (nx,)
+    y = np.arange(Oy, Oy - (ny - 0.5) * dy, -dy)
+    assert y.shape == (ny,)
+    xy = np.vstack([np.hstack([x[:, None], np.tile(yi, (nx, 1))]) for yi in y])
+    vertices = np.hstack([xy, z.ravel()[:, None]])
+    row = np.hstack(
+        [
+            np.arange(nx - 1)[:, None],
+            np.arange(1, nx)[:, None],
+            np.arange(1, nx)[:, None] + nx,
+            np.arange(nx - 1)[:, None] + nx,
+        ]
+    ).ravel()
+    quads = np.hstack([row + j * nx for j in range(ny - 1)])
+    doc = vtk_doc("PolyData", version="1.0")
+    grid = create_childnode(doc.documentElement, "PolyData")
+    assert vertices.shape[0] == nx * ny
+    assert quads.shape[0] == 4 * (nx - 1) * (ny - 1)
+    piece = create_childnode(
+        grid,
+        "Piece",
+        {
+            "NumberOfPoints": f"{nx*ny:d}",
+            "NumberOfVerts": "0",
+            "NumberOfLines": "0",
+            "NumberOfStrips": "0",
+            "NumberOfPolys": f"{(nx-1)*(ny-1):d}",
+        },
+    )
+    points = create_childnode(piece, "Points")
+    add_dataarray(
+        points, _ravel_information_block(vertices), "Points", nbcomp=3, ofmt=ofmt
+    )
+    polys = create_childnode(piece, "Polys")
+    add_dataarray(polys, _ravel_information_block(quads), "connectivity", ofmt=ofmt)
+    add_dataarray(polys, np.arange(4, nx * ny * 4 + 1, 4), "offsets", ofmt=ofmt)
+    if pointdata is None:
+        pointdata = {}
+    if texture is not None:
+        if hasattr(texture, "left"):
+            Ox, Oy = texture.left, texture.bottom
+            Lx = texture.right - Ox
+            Ly = texture.top - Oy
+        else:
+            Ox, Oy = texture.lower_left_corner
+            Lx, Ly = texture.extent
+        assert Lx > 0 and Ly > 0
+        tcoords = np.hstack(
+            [
+                ((vertices[:, 0] - Ox) / Lx)[:, None],
+                ((vertices[:, 1] - Oy) / Ly)[:, None],
+            ]
+        )
+        assert tcoords.shape == (vertices.shape[0], 2)
+        pointdata["TextureCoordinates"] = tcoords
+        add_piece_data(
+            piece,
+            "PointData",
+            pointdata,
+            attributes={"TCoords": "TextureCoordinates"},
+            ofmt=ofmt,
+        )
+    else:
+        add_piece_data(piece, "PointData", pointdata, ofmt=ofmt)
+    if celldata is None:
+        celldata = {}
+    add_piece_data(piece, "CellData", celldata, ofmt=ofmt)
+    return doc
+
+
 def points_as_vtu_doc(vertices, pointdata=None, ofmt="binary"):
     connectivity = np.arange(len(vertices))
     connectivity.shape = (-1, 1)
@@ -543,6 +648,7 @@ write_vtu = partial(write_xml, extension=".vtu")
 write_pvtu = partial(write_xml, extension=".pvtu")
 write_pvd = partial(write_xml, extension=".pvd")
 write_vtm = partial(write_xml, extension=".vtm")
+write_vtp = partial(write_xml, extension=".vtp")
 
 
 def _write_data_snapshots(

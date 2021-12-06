@@ -41,6 +41,7 @@ test:
     - pip3 install --upgrade --no-index --find-links ./dist vtkwriters
   script:
     - python3 test/bulk.py
+    - python3 test/test_zmap.py
 
 deploy-stage:
   stage: deploy
