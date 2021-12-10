@@ -5,7 +5,7 @@ long_description = (Path(__file__).parent / "README.rst").read_text()
 
 setup(
     name="vtkwriters",
-    use_scm_version={"write_to": "vtkwriters/version.py"},
+    use_scm_version={"write_to": "vtkwriters/_version.py"},
     setup_requires=["setuptools_scm"],
     author="Simon Lopez",
     author_email="s.lopez@brgm.fr",
