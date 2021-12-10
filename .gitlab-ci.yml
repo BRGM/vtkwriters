@@ -41,6 +41,7 @@ test:
   script:
     - python3 test/bulk.py
     - python3 test/test_zmap.py
+    - python3 test/two_triangles.py
 
 deploy-stage:
   stage: deploy

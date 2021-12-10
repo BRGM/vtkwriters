@@ -50,7 +50,7 @@ def vtk_doc(filetype, version=None):
     return doc
 
 
-def add_xdataarray_node(parent, nodename, dataname, dtype, ofmt, nbcomp):
+def add_xdataarray_node(parent, nodename, dataname, dtype, ofmt, nbcomp, nbtuples):
     attributes = {}
     if dtype == np.int32:
         dtype = "Int32"
@@ -77,21 +77,25 @@ def add_xdataarray_node(parent, nodename, dataname, dtype, ofmt, nbcomp):
     attributes["format"] = ofmt
     if nbcomp is not None:
         attributes["NumberOfComponents"] = "%d" % nbcomp
+    if nbtuples is not None:
+        attributes["NumberOfTuples"] = "%d" % nbtuples
     return create_childnode(parent, nodename, attributes)
 
 
-def add_dataarray_node(parent, name, dtype, ofmt="ascii", nbcomp=None):
-    return add_xdataarray_node(parent, "DataArray", name, dtype, ofmt, nbcomp)
+def add_dataarray_node(parent, name, dtype, ofmt="ascii", nbcomp=None, nbtuples=None):
+    return add_xdataarray_node(parent, "DataArray", name, dtype, ofmt, nbcomp, nbtuples)
 
 
-def add_pdataarray_node(parent, name, dtype, ofmt="ascii", nbcomp=None):
-    return add_xdataarray_node(parent, "PDataArray", name, dtype, ofmt, nbcomp)
+def add_pdataarray_node(parent, name, dtype, ofmt="ascii", nbcomp=None, nbtuples=None):
+    return add_xdataarray_node(
+        parent, "PDataArray", name, dtype, ofmt, nbcomp, nbtuples
+    )
 
 
 def add_dataarray(
-    parent, array, name, ofmt="ascii", nbcomp=None, nbitemsbyrow=10,
+    parent, array, name, ofmt="ascii", nbcomp=None, nbtuples=None, nbitemsbyrow=10,
 ):
-    elt = add_dataarray_node(parent, name, array.dtype, ofmt, nbcomp)
+    elt = add_dataarray_node(parent, name, array.dtype, ofmt, nbcomp, nbtuples)
     doc = elt.ownerDocument
     assert len(array.shape) == 1
     if ofmt == "ascii":
@@ -132,25 +136,26 @@ def add_dataarray(
     return elt
 
 
-def add_piece_data(piece, location, data=None, attributes=None, ofmt="ascii"):
-    if attributes is None:
-        attributes = {"Scalars": "scalars"}
+def add_piece_data(
+    piece, location, data=None, attributes=None, ofmt="ascii", isfield=False
+):
+    data = data or {}
+    attributes = attributes or {}
     datanode = create_childnode(piece, location, attributes)
-    if data is None:
-        data = {}
     for name in sorted(data):
         a = data[name]
+        nbtuples = None
+        if isfield:
+            a = np.array([a])
+            nbtuples = a.shape[0]
         assert len(a.shape) == 1 or len(a.shape) == 2
+        nbcomp = None
         if len(a.shape) == 2:
-            add_dataarray(
-                datanode,
-                _ravel_information_block(a),
-                ofmt=ofmt,
-                name=name,
-                nbcomp=a.shape[1],
-            )
-        else:
-            add_dataarray(datanode, a, ofmt=ofmt, name=name)
+            nbcomp = a.shape[1]
+            a = _ravel_information_block(a)
+        add_dataarray(
+            datanode, a, ofmt=ofmt, name=name, nbcomp=nbcomp, nbtuples=nbtuples
+        )
 
 
 def _ravel_information_block(block):
@@ -233,11 +238,22 @@ def vtu_vertices(vertices):
     return vertices
 
 
+def add_all_data(node, pointdata=None, celldata=None, ofmt="binary"):
+    add_piece_data(node, "PointData", pointdata, ofmt=ofmt)
+    add_piece_data(node, "CellData", celldata, ofmt=ofmt)
+
+
+def add_field_data(node, data, ofmt="binary"):
+    if data is not None:
+        add_piece_data(node, "FieldData", data, ofmt=ofmt, isfield=True)
+
+
 def vtu_doc_from_COC(
     vertices,
     offsets,
     connectivity,
     celltypes,
+    fielddata=None,
     pointdata=None,
     celldata=None,
     ofmt="binary",
@@ -269,8 +285,8 @@ def vtu_doc_from_COC(
     )
     add_dataarray(cells, offsets, "offsets", ofmt=ofmt)
     add_dataarray(cells, celltypes, "types", ofmt=ofmt)
-    add_piece_data(piece, "PointData", pointdata, ofmt=ofmt)
-    add_piece_data(piece, "CellData", celldata, ofmt=ofmt)
+    add_all_data(piece, pointdata=pointdata, celldata=celldata)
+    add_field_data(grid, fielddata, ofmt=ofmt)
     return doc
 
 
@@ -278,6 +294,7 @@ def vtu_doc(
     vertices,
     connectivity,
     celltypes=None,
+    fielddata=None,
     pointdata=None,
     celldata=None,
     ofmt="binary",
@@ -329,6 +346,7 @@ def vtu_doc(
         offsets,
         connectivity,
         celltypes,
+        fielddata,
         pointdata,
         celldata,
         ofmt,
@@ -337,7 +355,7 @@ def vtu_doc(
 
 
 def polyhedra_vtu_doc(
-    vertices, cells_faces, pointdata=None, celldata=None, ofmt="binary"
+    vertices, cells_faces, pointdata=None, celldata=None, fielddata=None, ofmt="binary"
 ):
     doc = vtk_doc("UnstructuredGrid", version="1.0")
     grid = create_childnode(doc.documentElement, "UnstructuredGrid")
@@ -376,8 +394,8 @@ def polyhedra_vtu_doc(
     add_dataarray(cells, celltypes, "types", ofmt=ofmt)
     add_dataarray(cells, faces, "faces", ofmt=ofmt)
     add_dataarray(cells, faceoffsets, "faceoffsets", ofmt=ofmt)
-    add_piece_data(piece, "PointData", pointdata, ofmt=ofmt)
-    add_piece_data(piece, "CellData", celldata, ofmt=ofmt)
+    add_all_data(piece, pointdata=pointdata, celldata=celldata, ofmt=ofmt)
+    add_field_data()
     return doc
 
 
@@ -587,7 +605,7 @@ def pvd_doc(snapshots):
     return doc
 
 
-def vtm_doc(elements):
+def vtm_doc(elements, fielddata=None, ofmt="ascii"):
     """Creates a composite dataset from paraview files.
     :param elements: is a sequence of filenames or tuple with (element name, filename)
     if not given basenames are used to name blocks,
@@ -624,6 +642,7 @@ def vtm_doc(elements):
             add_datasets(block, refactor(subblocks))
     except AttributeError:
         add_datasets(multiblock, refactor(elements))
+    add_field_data(multiblock, fielddata, ofmt=ofmt)
     return doc
 
 
