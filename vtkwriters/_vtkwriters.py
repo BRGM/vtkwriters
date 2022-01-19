@@ -395,7 +395,7 @@ def polyhedra_vtu_doc(
     add_dataarray(cells, faces, "faces", ofmt=ofmt)
     add_dataarray(cells, faceoffsets, "faceoffsets", ofmt=ofmt)
     add_all_data(piece, pointdata=pointdata, celldata=celldata, ofmt=ofmt)
-    add_field_data()
+    add_field_data(grid, fielddata, ofmt=ofmt)
     return doc
 
 
