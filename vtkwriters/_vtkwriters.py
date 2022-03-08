@@ -529,6 +529,44 @@ def elevation_map_as_vtp_doc(
     return doc
 
 
+def vtp_doc(
+    vertices, polys, pointdata=None, celldata=None, ofmt="binary",
+):
+    """
+    """
+    vertices = np.asarray(vertices)
+    assert vertices.ndim == 2 and vertices.shape[1] == 3
+    doc = vtk_doc("PolyData", version="1.0")
+    grid = create_childnode(doc.documentElement, "PolyData")
+    piece = create_childnode(
+        grid,
+        "Piece",
+        {
+            "NumberOfPoints": f"{vertices.shape[0]:d}",
+            "NumberOfVerts": "0",
+            "NumberOfLines": "0",
+            "NumberOfStrips": "0",
+            "NumberOfPolys": f"{len(polys):d}",
+        },
+    )
+    points = create_childnode(piece, "Points")
+    add_dataarray(
+        points, _ravel_information_block(vertices), "Points", nbcomp=3, ofmt=ofmt
+    )
+    polygons = create_childnode(piece, "Polys")
+    polydata = np.hstack(polys)
+    offsets = np.cumsum([len(p) for p in polys], dtype=polydata.dtype)
+    add_dataarray(polygons, polydata, "connectivity", ofmt=ofmt)
+    add_dataarray(polygons, offsets, "offsets", ofmt=ofmt)
+    if pointdata is None:
+        pointdata = {}
+    add_piece_data(piece, "PointData", pointdata, ofmt=ofmt)
+    if celldata is None:
+        celldata = {}
+    add_piece_data(piece, "CellData", celldata, ofmt=ofmt)
+    return doc
+
+
 def points_as_vtu_doc(vertices, pointdata=None, ofmt="binary"):
     connectivity = np.arange(len(vertices))
     connectivity.shape = (-1, 1)
