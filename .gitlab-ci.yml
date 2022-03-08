@@ -5,27 +5,22 @@ stages:
   - build
   - test
   - deploy
-#  - documentation
 
-check-format-and-version:
-  stage: check
-  tags:
-    - docker
-  #only:
-  #  - merge_requests
-  script:
-    # We could check format only for merge requests
-    # using only merge_requests
-    # and CI_MERGE_REQUEST_SOURCE_BRANCH_SHA and CI_MERGE_REQUEST_SOURCE_BRANCH_SHA
-    # variables but the latest are not correclyt set
-    - pre-commit run --all
+include:
+  - project: 'brgm/modelisation-geologique/templates'
+    ref: master
+    file:
+      - '/gitlab-ci/check.yml'
+      - '/gitlab-ci/deploy.yml'
 
 build:
   stage: build
   tags:
     - docker
+  before_script:
+    - source activate ${CI_CONDA_ENVIRONMENT}
   script:
-    - python3 setup.py bdist_wheel
+    - python setup.py bdist_wheel
   artifacts:
     paths:
     - dist/
@@ -37,44 +32,10 @@ test:
   tags:
     - docker
   before_script:
-    - pip3 install --upgrade --no-index --find-links ./dist vtkwriters
+    - source activate ${CI_CONDA_ENVIRONMENT}
+    - python -m pip install --upgrade --no-index --find-links ./dist vtkwriters
   script:
-    - python3 test/bulk.py
-    - python3 test/test_zmap.py
-    - python3 test/two_triangles.py
-    - python3 test/test_polyhedron.py
-
-deploy-stage:
-  stage: deploy
-  tags:
-    - docker
-  only:
-    - master
-  script:
-    - twine upload -u ${REGISTRY_NEXUS_USER} -p ${REGISTRY_NEXUS_PASSWORD} --repository-url ${REGISTRY_NEXUS}/pypi-stage/ dist/*
-
-deploy-release:
-  stage: deploy
-  tags:
-    - docker
-  only:
-    - tags
-  except:
-    - branches
-  script:
-    - twine upload -u ${REGISTRY_NEXUS_USER} -p ${REGISTRY_NEXUS_PASSWORD} --repository-url ${REGISTRY_NEXUS}/pypi-releases/ dist/*
-
-# pages:
-#   stage: documentation
-#   tags:
-#     - docker
-#   only:
-#     - master
-#   before_script:
-#     - pip3 install --upgrade --no-index --find-links ./dist vtkwriters
-#     - mkdir -p public
-#   script:
-#     - /bin/bash -e docs/generate_doc.bash
-#   artifacts:
-#     paths:
-#     - public
+    - python test/bulk.py
+    - python test/test_zmap.py
+    - python test/two_triangles.py
+    - python test/test_polyhedron.py
