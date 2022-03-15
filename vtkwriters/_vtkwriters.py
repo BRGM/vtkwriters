@@ -399,12 +399,17 @@ def polyhedra_vtu_doc(
     return doc
 
 
-def pvtu_doc(
-    vertices_type, pieces, pointdata_types=None, celldata_types=None, ofmt="binary"
+def parallel_doc(
+    doc_type,
+    vertices_type,
+    pieces,
+    pointdata_types=None,
+    celldata_types=None,
+    ofmt="binary",
 ):
-    doc = vtk_doc("PUnstructuredGrid")
+    doc = vtk_doc(f"P{doc_type}")
     root_element = doc.documentElement
-    pugrid = create_childnode(root_element, "PUnstructuredGrid", {"GhostLevel": "0"})
+    pugrid = create_childnode(root_element, f"P{doc_type}", {"GhostLevel": "0"})
     ppoints = create_childnode(pugrid, "PPoints")
     add_pdataarray_node(ppoints, "Points", vertices_type, ofmt, nbcomp=3)
 
@@ -424,6 +429,14 @@ def pvtu_doc(
     for piece in pieces:
         create_childnode(pugrid, "Piece", {"Source": piece})
     return doc
+
+
+def pvtu_doc(*args, **kwargs):
+    return parallel_doc("UnstructuredGrid", *args, **kwargs)
+
+
+def pvtp_doc(*args, **kwargs):
+    return parallel_doc("PolyData", *args, **kwargs)
 
 
 def elevation_map_as_vtp_doc(
@@ -706,6 +719,7 @@ write_pvtu = partial(write_xml, extension=".pvtu")
 write_pvd = partial(write_xml, extension=".pvd")
 write_vtm = partial(write_xml, extension=".vtm")
 write_vtp = partial(write_xml, extension=".vtp")
+write_pvtp = partial(write_xml, extension=".pvtp")
 
 
 def _write_data_snapshots(
