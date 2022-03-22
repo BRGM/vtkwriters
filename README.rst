@@ -1,6 +1,6 @@
 A set of pure python routines to write KitWare VTK files.
 
-This are just conveniencies that I use an other may find usefull.
+This are just conveniencies that I use and other may find usefull.
 
 You might also be interested in packages like:
   - `meshio <https://github.com/nschloe/meshio>`_ (more general)
