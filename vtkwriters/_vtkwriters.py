@@ -449,6 +449,7 @@ def elevation_map_as_vtp_doc(
     celldata=None,
     texture=None,
     ofmt="binary",
+    return_elements=False,
 ):
     """
     """
@@ -539,6 +540,8 @@ def elevation_map_as_vtp_doc(
     if celldata is None:
         celldata = {}
     add_piece_data(piece, "CellData", celldata, ofmt=ofmt)
+    if return_elements:
+        return doc, (vertices, quads)
     return doc
 
 
