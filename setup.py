@@ -7,7 +7,7 @@ setup(
     name="vtkwriters",
     use_scm_version={"write_to": "vtkwriters/_version.py"},
     setup_requires=["setuptools_scm"],
-    install_requires=['numpy', 'verstr'],
+    install_requires=["numpy", "verstr"],
     author="Simon Lopez",
     author_email="s.lopez@brgm.fr",
     description="A set of routines to write KitWare VTK/Paraview files.",
