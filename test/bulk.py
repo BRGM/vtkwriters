@@ -22,7 +22,9 @@ for shape in itertools.permutations((3, 5, 7)):
     for axis in range(dim):
         axisname = ["Ox", "Oy", "Oz"][axis]
         filename = "test-block_%dx%dx%d-along_" % (shape) + axisname
-        pos = [slice(None),] * dim
+        pos = [
+            slice(None),
+        ] * dim
         for k in range(shape[axis]):
             pos[axis] = k
             block[tuple(pos)] = k
@@ -49,6 +51,12 @@ write_block_snapshots(times, blocks, "foo", proppath="values")
 C = np.arange(len(connectivity))
 datas = [C + t for t in times]
 write_unstructured_snapshots(
-    times, "ufoo", vertices, connectivity, datas, "cell", proppath="values",
+    times,
+    "ufoo",
+    vertices,
+    connectivity,
+    datas,
+    "cell",
+    proppath="values",
 )
 points = points_as_vtu_doc(np.array([[0, 0, 0]], dtype=np.double))

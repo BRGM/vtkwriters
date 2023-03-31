@@ -11,5 +11,9 @@ zmap = np.arange(12)
 zmap.shape = 4, 3
 
 doc = vtkw.elevation_map_as_vtp_doc(
-    zmap, upper_left_center=(0, 20), steps=(2, 2), texture=texture, ofmt="ascii",
+    zmap,
+    upper_left_center=(0, 20),
+    steps=(2, 2),
+    texture=texture,
+    ofmt="ascii",
 )
