@@ -601,6 +601,46 @@ def vtp_doc(
     return doc
 
 
+def vts_doc(
+    vertices,
+    pointdata=None,
+    celldata=None,
+    ofmt="binary",
+):
+    """ """
+    vertices = np.asarray(vertices)
+    assert vertices.ndim == vertices.shape[-1] + 1
+    doc = vtk_doc("StructuredGrid", version="1.0")
+    extent_description = " ".join(
+        [f"0 {vertices.shape[i] - 1}" for i in range(vertices.ndim - 1)]
+    )
+    grid = create_childnode(
+        doc.documentElement, "StructuredGrid", {"WholeExtent": extent_description}
+    )
+    piece = create_childnode(
+        grid,
+        "Piece",
+        {
+            "Extent": extent_description,
+        },
+    )
+    points = create_childnode(piece, "Points")
+    add_dataarray(
+        points,
+        _ravel_information_block(vertices),
+        "Points",
+        nbcomp=vertices.ndim - 1,
+        ofmt=ofmt,
+    )
+    if pointdata is None:
+        pointdata = {}
+    add_piece_data(piece, "PointData", pointdata, ofmt=ofmt)
+    if celldata is None:
+        celldata = {}
+    add_piece_data(piece, "CellData", celldata, ofmt=ofmt)
+    return doc
+
+
 def points_as_vtu_doc(vertices, pointdata=None, ofmt="binary"):
     connectivity = np.arange(len(vertices))
     connectivity.shape = (-1, 1)
@@ -752,6 +792,7 @@ def write_xml(doc, out, indent=" " * 2, newl="\n", extension=""):
 
 
 write_vti = partial(write_xml, extension=".vti")
+write_vts = partial(write_xml, extension=".vts")
 write_vtu = partial(write_xml, extension=".vtu")
 write_pvtu = partial(write_xml, extension=".pvtu")
 write_pvd = partial(write_xml, extension=".pvd")
