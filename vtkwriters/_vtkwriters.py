@@ -30,6 +30,17 @@ vtk_celltype = {
 }
 
 
+def _extract_single_node(root, name, allow_none=False):
+    all_nodes = root.getElementsByTagName(name)
+    if len(all_nodes) == 0 and allow_none:
+        return
+    if len(all_nodes) != 1:
+        raise RuntimeError(
+            f"We should have a single {name} node (found {len(all_nodes)})!"
+        )
+    return all_nodes[0]
+
+
 def create_childnode(parent, name, attributes=None):
     if attributes is None:
         attributes = {}
@@ -247,6 +258,30 @@ def vtu_vertices(vertices):
 def add_all_data(node, pointdata=None, celldata=None, ofmt="binary"):
     add_piece_data(node, "PointData", pointdata, ofmt=ofmt)
     add_piece_data(node, "CellData", celldata, ofmt=ofmt)
+
+
+def clear_all_data(doc):
+    def _clear(piece_node, data_type):
+        data_node = _extract_single_node(piece_node, data_type, allow_none=True)
+        if data_node:
+            piece_node.removeChild(data_node)
+
+    piece_node = _extract_single_node(doc, "Piece")
+    _clear(piece_node, "PointData")
+    _clear(piece_node, "CellData")
+
+
+def replace_data(doc, pointdata=None, celldata=None, ofmt="binary"):
+    def _replace(piece_node, data_type, data):
+        if data:
+            data_node = _extract_single_node(piece_node, data_type, allow_none=True)
+            if data_node:
+                piece_node.removeChild(data_node)
+            add_piece_data(piece_node, data_type, data, ofmt=ofmt)
+
+    piece_node = _extract_single_node(doc, "Piece")
+    _replace(piece_node, "PointData", pointdata)
+    _replace(piece_node, "CellData", celldata)
 
 
 def add_field_data(node, data, ofmt="binary"):
